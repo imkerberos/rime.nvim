@@ -33,7 +33,7 @@ build = {
       sources = { "./rime/rime.c" },
       defines = {},
       incdirs = { "/nix/store/x9wcy82zsmg6xkxx88n5dbikrvw662fn-librime-1.12.0/include" },
-      libdirs = { "/nix/store/x9wcy82zsmg6xkxx88n5dbikrvw662fn-librime-1.12.0//lib" },
+      libdirs = { "/nix/store/x9wcy82zsmg6xkxx88n5dbikrvw662fn-librime-1.12.0/lib" },
       libraries = { "rime" },
     }
   }

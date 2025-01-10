@@ -65,6 +65,11 @@ function M.reset_keymaps()
     end
 end
 
+local function highlight_line(win_id, buf_id, line_number, hl_group)
+    local ns = vim.api.nvim_create_namespace('my_highlights')                -- 创建命名空间，避免冲突
+    vim.api.nvim_buf_add_highlight(buf_id, ns, hl_group, line_number, 0, -1) -- 高亮整行
+end
+
 ---feed keys
 ---@param text string
 function M.feed_keys(text)
@@ -110,7 +115,7 @@ function M.draw_ui(key)
     end
     vim.v.char = ""
 
-    local lines, col = require("rime.draw_ui")(context, M.ui, vim.api.nvim_strwidth(M.ui.left))
+    local lines, row, col = require("rime.draw_ui")(context, M.ui, vim.api.nvim_strwidth(M.ui.left))
     M.preedit = lines[1]
         :gsub(M.ui.cursor, "")
         :gsub(" ", "")
@@ -138,6 +143,7 @@ function M.draw_ui(key)
             else
                 vim.api.nvim_win_set_config(M.win_id, config)
             end
+            highlight_line(M.win_id, M.buf_id, row, "Error")
         end
     )
     M.reset_keymaps()
@@ -172,6 +178,14 @@ function M.init()
     end
 end
 
+function M.my_callback(key)
+    return function()
+        local key = vim.v.char
+        vim.print("callback key: \"" .. vim.v.char .. "\"")
+        M.callback(key)()
+    end
+end
+
 ---enable IME
 function M.enable()
     vim.print("enable rime")
@@ -184,7 +198,8 @@ function M.enable()
     vim.api.nvim_create_autocmd("InsertCharPre", {
         group = M.augroup_id,
         buffer = 0,
-        callback = M.callback(""),
+        callback = M.my_callback(""),
+        -- callback = M.callback(""),
     })
     vim.api.nvim_create_autocmd({ "InsertLeave", "WinLeave" }, {
         group = M.augroup_id,

@@ -9,13 +9,16 @@ return function(context, ui, left_width)
     preedit = preedit:sub(1, context.composition.cursor_pos) ..
         ui.cursor .. preedit:sub(context.composition.cursor_pos + 1)
     local candidates = context.menu.candidates
-    local candidates_ = ""
+    -- local candidates_ = ""
+    local candidates_ = {}
     local indices = ui.indices
     for index, candidate in ipairs(candidates) do
         local text = indices[index] .. " " .. candidate.text
         if candidate.comment ~= nil then
             text = text .. " " .. candidate.comment
         end
+
+        --[[
         if (context.menu.highlighted_candidate_index + 1 == index) then
             text = ui.left_sep .. text
         elseif (context.menu.highlighted_candidate_index + 2 == index) then
@@ -23,13 +26,24 @@ return function(context, ui, left_width)
         else
             text = " " .. text
         end
-        candidates_ = candidates_ .. text
+        --]]
+        -- candidates_ = candidates_ .. text
+        if (context.menu.highlighted_candidate_index + 1 == index) then
+            -- text = ui.left_sep .. text .. ui.right_sep
+            text = " " .. text .. " "
+        else
+            text = " " .. text .. " "
+        end
+        table.insert(candidates_, text)
     end
+
+    --[[
     if (context.menu.num_candidates == context.menu.highlighted_candidate_index + 1) then
         candidates_ = candidates_ .. ui.right_sep
     else
         candidates_ = candidates_ .. " "
     end
+
     local col = 0
     local left = ui.left
     if context.menu.page_no ~= 0 then
@@ -43,4 +57,9 @@ return function(context, ui, left_width)
         candidates_ = candidates_ .. ui.right
     end
     return { preedit, candidates_ }, col
+    --]]
+    local col = 0
+    local row = context.menu.highlighted_candidate_index + 1
+    table.insert(candidates_, 1, preedit)
+    return candidates_, row, col
 end
