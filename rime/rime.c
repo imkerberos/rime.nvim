@@ -16,7 +16,7 @@ static void vim_print(lua_State *L, const char *message_type, const char *messag
   lua_pushstring(L, message);
 
   // 调用函数 (1 个参数, 0 个返回值)
-  if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+  if (lua_pcall(L, 1, 0, 0) != 0) {
     fprintf(stderr, "Error calling vim.print: %s\n", lua_tostring(L, -1));
     lua_pop(L, 1); // 移除错误消息
   }
