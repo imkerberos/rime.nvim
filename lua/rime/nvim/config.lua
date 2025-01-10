@@ -1,27 +1,34 @@
-local prefix = os.getenv("PREFIX") or "/usr"
-local home = os.getenv("HOME") or "."
 local shared_data_dir = ""
-for _, dir in ipairs {
-    prefix .. "/share/rime-data",
-    "/usr/local/share/rime-data",
-    "/run/current-system/sw/share/rime-data",
-    "/sdcard/rime-data"
-} do
-    -- luacheck: ignore 113
-    ---@diagnostic disable: undefined-global
-    if vim.fn.isdirectory(dir) == 1 then
-        shared_data_dir = dir
+do
+    local prefix = os.getenv("PREFIX") or "/usr"
+    for _, dir in ipairs {
+        prefix .. "/share/rime-data",
+        "/usr/local/share/rime-data",
+        "/run/current-system/sw/share/rime-data",
+        "/sdcard/rime-data"
+    } do
+        -- luacheck: ignore 113
+        ---@diagnostic disable: undefined-global
+        if vim.fn.isdirectory(dir) == 1 then
+            shared_data_dir = dir
+            break
+        end
     end
 end
+
 local user_data_dir = ""
-for _, dir in ipairs {
-    home .. "/.config/ibus/rime",
-    home .. "/.local/share/fcitx5/rime",
-    home .. "/.config/fcitx/rime",
-    home .. "/sdcard/rime"
-} do
-    if vim.fn.isdirectory(dir) == 1 then
-        user_data_dir = dir
+do
+    local home = os.getenv("HOME") or "."
+    for _, dir in ipairs {
+        home .. "/.config/ibus/rime",
+        home .. "/.local/share/fcitx5/rime",
+        home .. "/.config/fcitx/rime",
+        home .. "/sdcard/rime"
+    } do
+        if vim.fn.isdirectory(dir) == 1 then
+            user_data_dir = dir
+            break
+        end
     end
 end
 
@@ -83,8 +90,8 @@ return {
         special = special
     },
     traits = {
-        shared_data_dir = shared_data_dir,
-        user_data_dir = user_data_dir,
+        shared_data_dir = "",
+        user_data_dir = "",
         log_dir = vim.fs.joinpath(vim.fn.stdpath("data"), "rime"),
         distribution_name = "Rime",
         distribution_code_name = "nvim-rime",

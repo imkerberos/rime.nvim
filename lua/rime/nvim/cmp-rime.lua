@@ -27,11 +27,10 @@ function source.get_keyword_pattern()
     return '\\%([!-~]\\)*'
 end
 
--- luacheck: ignore 212/self
 ---complete
 ---@param request table
 ---@param callback table
-function source:complete(request, callback)
+function source.complete(request, callback)
     local keys = string.sub(request.context.cursor_before_line, request.offset)
     source._callback_table[request.context.id] = callback
     local cursor = request.context.cursor
