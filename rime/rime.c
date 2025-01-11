@@ -4,32 +4,22 @@
 #define DEFAULT_BUFFER_SIZE 1024
 
 static RimeApi *rime_api = NULL;
-
-static void vim_print(lua_State *L, const char *message_type, const char *message_value) {
-  char message[DEFAULT_BUFFER_SIZE] = "";
-  sprintf(message, "message_type: %s, message_value: %s", message_type, message_value);
-  // 获取 vim.print 函数
-  lua_getglobal(L, "vim");
-  lua_getfield(L, -1, "print");
-
-  // 压入参数
-  lua_pushstring(L, message);
-
-  // 调用函数 (1 个参数, 0 个返回值)
-  if (lua_pcall(L, 1, 0, 0) != 0) {
-    fprintf(stderr, "Error calling vim.print: %s\n", lua_tostring(L, -1));
-    lua_pop(L, 1); // 移除错误消息
-  }
-
-  // 清理堆栈
-  lua_pop(L, 1); // 移除 vim 表
-}
+static int notification_ref = LUA_NOREF;
 
 static void notification_handler(void *context,
                           RimeSessionId session_id,
                           const char *message_type,
                           const char *message_value) {
-  vim_print(context, message_type, message_value);
+  lua_State* L = (lua_State*)context;
+  if (notification_ref != LUA_NOREF) {
+    lua_rawgeti(L, LUA_REGISTRYINDEX, notification_ref);
+    lua_pushstring(L, message_type);
+    lua_pushstring(L, message_value);
+    if (lua_pcall(L, 2, 0, 0) != 0) {
+      fprintf(stderr, "Error calling notification handler: %s\n", lua_tostring(L, -1));
+      lua_pop(L, 1); // 移除错误消息
+    }
+  }
 }
 
 static int init(lua_State *L) {
@@ -53,6 +43,15 @@ static int init(lua_State *L) {
   lua_getfield(L, 1, "min_log_level");
   rime_traits.min_log_level = lua_tointeger(L, -1);
 
+  // 获取 Lua 函数并存储在全局变量中
+  lua_getfield(L, 1, "notification_handler");
+  if (lua_isfunction(L, -1)) {
+    lua_pushvalue(L, -1);
+    notification_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  } else {
+    lua_pop(L, 1);
+  }
+
   rime_api->setup(&rime_traits);
   rime_api->initialize(&rime_traits);
   rime_api->set_notification_handler(notification_handler, L);
@@ -67,30 +66,27 @@ static int finalize(lua_State *L) {
 }
 
 static int createSession(lua_State *L) {
-  vim_print(L, "createSession", "createSession");
   RimeSessionId session_id = rime_api->create_session();
   if (session_id == 0)
-    vim_print(L, "createSession", "cannot create session");
+    notification_handler(L, 0, "createSession", "cannot create session");
   lua_pushinteger(L, session_id);
   return 1;
 }
 
 static int destroySession(lua_State *L) {
-  vim_print(L, "destroySession", "destroySession");
   RimeSessionId session_id = lua_tointeger(L, 1);
   Bool ret = rime_api->destroy_session(session_id);
   if (!ret)
-    vim_print(L, "destroySession", "cannot destroy session");
+    notification_handler(L, session_id, "destroySession", "cannot destroy session");
   lua_pushboolean(L, ret);
   return 0;
 }
 
 static int getCurrentSchema(lua_State *L) {
-  vim_print(L, "getCurrentSchema", "getCurrentSchema");
   RimeSessionId session_id = lua_tointeger(L, 1);
   char buffer[DEFAULT_BUFFER_SIZE] = "";
   if (!rime_api->get_current_schema(session_id, buffer, DEFAULT_BUFFER_SIZE)) {
-    vim_print(L, "getCurrentSchema", "cannot get current schema");
+    notification_handler(L, session_id, "getCurrentSchema", "cannot get current schema");
     return 0;
   }
   lua_pushstring(L, buffer);
@@ -98,10 +94,9 @@ static int getCurrentSchema(lua_State *L) {
 }
 
 static int getSchemaList(lua_State *L) {
-  vim_print(L, "getSchemaList", "getSchemaList");
   RimeSchemaList schema_list = {};
   if (!rime_api->get_schema_list(&schema_list)) {
-    vim_print(L, "getSchemaList", "cannot get schema list");
+    notification_handler(L, 0, "getSchemaList", "cannot get schema list");
     return 0;
   }
   lua_newtable(L);
@@ -117,11 +112,10 @@ static int getSchemaList(lua_State *L) {
 }
 
 static int selectSchema(lua_State *L) {
-  vim_print(L, "selectSchema", "selectSchema");
   RimeSessionId session_id = lua_tointeger(L, 1);
   Bool ret = rime_api->select_schema(session_id, lua_tostring(L, 2));
   if (!ret)
-    vim_print(L, "selectSchema", "cannot select schema for session");
+    notification_handler(L, session_id, "selectSchema", "cannot select schema for session");
   lua_pushboolean(L, ret);
   return 1;
 }
@@ -130,20 +124,16 @@ static int processKey(lua_State *L) {
   RimeSessionId session_id = lua_tointeger(L, 1);
   int key = lua_tointeger(L, 2);
   int mask = lua_tointeger(L, 3);
-  char buffer[DEFAULT_BUFFER_SIZE] = "";
   int ret = rime_api->process_key(session_id, key, mask);
-  sprintf(buffer, "session_id: %lu, key: %d, mask: %d ret: %d", session_id, key, mask, ret);
-  vim_print(L, "processKey", buffer);
   lua_pushboolean(L, ret);
   return 1;
 }
 
 static int getContext(lua_State *L) {
-  vim_print(L, "getContext", "getContext");
   RimeSessionId session_id = lua_tointeger(L, 1);
   RIME_STRUCT(RimeContext, context);
   if (!rime_api->get_context(session_id, &context)) {
-    vim_print(L, "getContext", "cannot get context for session");
+    notification_handler(L, session_id, "getContext", "cannot get context for session");
     return 0;
   }
   lua_createtable(L, 0, 2);
@@ -188,11 +178,10 @@ static int getContext(lua_State *L) {
 }
 
 static int getCommit(lua_State *L) {
-  vim_print(L, "getCommit", "getCommit");
   RimeSessionId session_id = lua_tointeger(L, 1);
   RIME_STRUCT(RimeCommit, commit);
   if (!rime_api->get_commit(session_id, &commit)) {
-    vim_print(L, "getCommit", "cannot get commit for session %lu\n");
+    notification_handler(L, session_id, "getCommit", "cannot get commit for session");
     return 0;
   }
   lua_createtable(L, 0, 1);
@@ -203,13 +192,11 @@ static int getCommit(lua_State *L) {
 }
 
 static int commitComposition(lua_State *L) {
-  vim_print(L, "commitComposition", "commitComposition");
   lua_pushboolean(L, rime_api->commit_composition(lua_tointeger(L, 1)));
   return 1;
 }
 
 static int clearComposition(lua_State *L) {
-  vim_print(L, "clearComposition", "clearComposition");
   rime_api->clear_composition(lua_tointeger(L, 1));
   return 0;
 }

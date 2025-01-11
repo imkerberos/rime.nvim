@@ -7,7 +7,7 @@ local M = require "rime.nvim.config"
 ---setup
 ---@param conf table
 function M.setup(conf)
-    M = vim.tbl_deep_extend("keep", conf, M)
+    M = vim.tbl_deep_extend("force", M, conf)
 end
 
 ---process key
@@ -169,8 +169,8 @@ end
 ---initial
 function M.init()
     if M.session_id == 0 then
-        vim.fn.mkdir(M.traits.log_dir, "p")
-        rime.init(M.traits)
+        vim.fn.mkdir(M.rime.log_dir, "p")
+        rime.init(M.rime)
         M.session_id = rime.createSession()
     end
     if M.augroup_id == 0 then
@@ -181,7 +181,6 @@ end
 function M.my_callback(key)
     return function()
         local key = vim.v.char
-        vim.print("callback key: \"" .. vim.v.char .. "\"")
         M.callback(key)()
     end
 end

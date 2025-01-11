@@ -89,7 +89,7 @@ return {
         nowait = nowait,
         special = special
     },
-    traits = {
+    rime = {
         shared_data_dir = "",
         user_data_dir = "",
         log_dir = vim.fs.joinpath(vim.fn.stdpath("data"), "rime"),
@@ -98,6 +98,7 @@ return {
         distribution_version = "0.0.1",
         app_name = "rime.nvim-rime",
         min_log_level = 3,
+        notification_handler = function() end,
     },
     ui = {
         indices = { "① ", "② ", "③ ", "④ ", "⑤ ", "⑥ ", "⑦ ", "⑧ ", "⑨ ", "⓪ " },
