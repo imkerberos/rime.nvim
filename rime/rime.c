@@ -1,5 +1,7 @@
 #include <lauxlib.h>
 #include <rime_api.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define DEFAULT_BUFFER_SIZE 1024
 
@@ -201,6 +203,50 @@ static int clearComposition(lua_State *L) {
   return 0;
 }
 
+static int inlineAscii(lua_State *L) {
+  RimeConfig *config = malloc(sizeof(RimeConfig));
+
+  RimeSessionId session_id = lua_tointeger(L, 1);
+  if (!rime_api->user_config_open("build/default.yamal", config)) {
+    notification_handler(L, session_id, "inlineAscii", "cannot open user config");
+    free(config);
+    return 0;
+  }
+
+  char* buf = malloc(sizeof(char) * 128);
+  char* result = NULL;
+
+  if (rime_api->config_get_string(config, "ascii_composer/switch_key/Shift_L", buf, 128)
+      && (strcmp(buf, "inline_ascii") == 0)) {
+    rime_api->process_key(session_id, 65505, 0);
+    rime_api->process_key(session_id, 65505, 1073741824);
+    result = "inline_ascii";
+  } else if (rime_api->config_get_string(config, "ascii_composer/switch_key/Shift_R", buf, 128)
+             && (strcmp(buf, "inline_ascii") == 0)) {
+    rime_api->process_key(session_id, 65506, 0);
+    rime_api->process_key(session_id, 65506, 1073741824);
+    result = "inline_ascii";
+  } else if (rime_api->config_get_string(config, "ascii_composer/switch_key/Control_L", buf, 128)
+             && (strcmp(buf, "inline_ascii") == 0)) {
+    rime_api->process_key(session_id, 65507, 0);
+    rime_api->process_key(session_id, 65507, 1073741824);
+    result = "inline_ascii";
+  } else if (rime_api->config_get_string(config, "ascii_composer/switch_key/Control_R", buf, 128)
+             && (strcmp(buf, "inline_ascii") == 0)) {
+    rime_api->process_key(session_id, 65508, 0);
+    rime_api->process_key(session_id, 65508, 1073741824);
+    result = "inline_ascii";
+  } else {
+    result = NULL;
+  }
+  free(buf);
+
+  lua_pushstring(L, result);
+
+  return 1;
+}
+  
+
 static const luaL_Reg functions[] = {
     {"init", init},
     {"createSession", createSession},
@@ -213,6 +259,7 @@ static const luaL_Reg functions[] = {
     {"getCommit", getCommit},
     {"commitComposition", commitComposition},
     {"clearComposition", clearComposition},
+    {"inlineAscii", inlineAscii},
     {"finalize", finalize},
     {NULL, NULL},
 };

@@ -79,10 +79,10 @@ function M.feed_keys(text)
         -- cannot work
         -- vim.api.nvim_feedkeys(text, 't', true)
         local cursor = vim.api.nvim_win_get_cursor(0)
-        local r = cursor[1]
-        local c = cursor[2]
-        vim.api.nvim_buf_set_text(0, r - 1, c, r - 1, c, { text })
-        vim.api.nvim_win_set_cursor(0, { r, c + #text })
+        local row = cursor[1]
+        local col = cursor[2]
+        vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, { text })
+        vim.api.nvim_win_set_cursor(0, { row, col + #text })
     end
     M.win_close()
     M.preedit = ""
@@ -253,6 +253,13 @@ function M.toggle()
         M.disable()
     else
         M.enable()
+    end
+end
+
+function M.inlineAscii()
+    if vim.b.rime_is_enabled then
+        rime.inlineAscii()
+        vim.notify("inline ascii")
     end
 end
 
