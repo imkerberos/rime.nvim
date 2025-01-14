@@ -2,6 +2,7 @@
 ---@diagnostic disable: undefined-global
 local rime = require "rime"
 local M = require "rime.nvim.config"
+local utils = require "rime.nvim.utils"
 
 
 ---setup
@@ -129,6 +130,7 @@ function M.draw_ui(key)
         height = #lines,
         style = "minimal",
         width = width,
+        border = "rounded",
         row = 1,
         col = col,
     }
@@ -260,6 +262,81 @@ function M.inlineAscii()
     if vim.b.rime_is_enabled then
         rime.inlineAscii()
         vim.notify("inline ascii")
+    end
+end
+
+function M.icon()
+    if vim.b.rime_is_enabled then
+        return "🌐", { fg = "green" }
+    else
+        return "🌐", { fg = "grey" }
+    end
+end
+
+M.rime_enabled = false
+
+function M.enable_rime()
+    vim.print("install event filter")
+    if M.rime_enabled then
+        return
+    end
+    M.rime_enabled = true
+
+    local rime_group = vim.api.nvim_create_augroup("RimeTriggerGroup", { clear = true })
+    vim.api.nvim_create_autocmd("TextChangedI", {
+        group = rime_group,
+        pattern = "*",
+        callback = function()
+            local word_before = utils.get_chars_before_cursor(2, 2) or ""
+            vim.print("word_before: \"" .. word_before .. "\"")
+            if not word_before then return end
+            if word_before:match("[%w%p]%s") then
+                vim.print("1")
+                if not vim.b.rime_is_enabled then
+                    M.enable()
+                end
+            elseif word_before:match("[^%w%p]%s") then
+                vim.print("2")
+                if vim.b.rime_is_enabled then
+                    M.disable()
+                end
+            elseif word_before:match("[%w%p]$") then
+                vim.print("3")
+                if vim.b.rime_is_enabled then
+                    M.disable()
+                end
+            elseif word_before:match("[^%w%p]$") then
+                vim.print("4")
+                if not vim.b.rime_is_enabled then
+                    M.enable()
+                end
+            else
+                vim.print("5")
+            end
+        end
+    })
+
+    if not vim.b.rime_is_enabled then
+        M.enable()
+    end
+end
+
+function M.disable_rime()
+    if not M.rime_enabled then
+        return
+    end
+    M.rime_enabled = false
+    vim.api.nvim_del_augroup_by_name("RimeTriggerGroup")
+    if vim.b.rime_is_enabled then
+        M.disable()
+    end
+end
+
+function M.toggle_rime()
+    if M.rime_enabled then
+        M.disable_rime()
+    else
+        M.enable_rime()
     end
 end
 
