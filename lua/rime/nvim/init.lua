@@ -4,11 +4,28 @@ local rime = require "rime"
 local M = require "rime.nvim.config"
 local utils = require "rime.nvim.utils"
 
+local set_scheme = function()
+    local defaults = {
+        RimeCompositionBG = { bg = "#F5F5DC" },
+        RimePreeditNormal = { fg = "#008000" },
+        RimePreeditCursor = { fg = "#008000" },
+        RimeCandidateNormal = { fg = "#000000" },
+        RimeCandidateSelected = { fg = "#000000", bg = "#FF2F92" },
+        RimeCandidateNumber = { fg = "#808080" },
+    }
+
+    for hl_group, hl in pairs(defaults) do
+        vim.api.nvim_set_hl(0, hl_group, hl)
+    end
+end
+
 
 ---setup
 ---@param conf table
 function M.setup(conf)
     M = vim.tbl_deep_extend("force", M, conf)
+    set_scheme()
+    M.ns = vim.api.nvim_create_namespace('my_highlights') -- 创建命名空间，避免冲突
 end
 
 ---process key
@@ -67,8 +84,9 @@ function M.reset_keymaps()
 end
 
 local function highlight_line(win_id, buf_id, line_number, hl_group)
-    local ns = vim.api.nvim_create_namespace('my_highlights')                -- 创建命名空间，避免冲突
-    vim.api.nvim_buf_add_highlight(buf_id, ns, hl_group, line_number, 0, -1) -- 高亮整行
+    return vim.api.nvim_buf_set_extmark(buf_id, M.ns, line_number, 0,
+        { end_line = line_number + 1, end_col = 0, hl_group = hl_group }) -- 高亮整行
+    -- vim.api.nvim_buf_add_highlight(buf_id, ns, hl_group, line_number, 0, -1)                                                          -- 高亮整行
 end
 
 ---feed keys
@@ -130,7 +148,7 @@ function M.draw_ui(key)
         height = #lines,
         style = "minimal",
         width = width,
-        border = "rounded",
+        border = "none",
         row = 1,
         col = col,
     }
@@ -142,10 +160,22 @@ function M.draw_ui(key)
             vim.api.nvim_buf_set_lines(M.buf_id, 0, #lines, false, lines)
             if (M.win_id == 0 or not vim.api.nvim_win_is_valid(M.win_id)) then
                 M.win_id = vim.api.nvim_open_win(M.buf_id, false, config)
+                M.selected_extmark_id = highlight_line(M.win_id, M.buf_id, row, "RimeCandidateSelected")
+                vim.api.nvim_win_set_option(M.win_id, 'winhighlight', "Normal:RimeCompositionBG")
             else
                 vim.api.nvim_win_set_config(M.win_id, config)
+                if M.selected_extmark_id then
+                    vim.api.nvim_buf_del_extmark(M.buf_id, M.ns, M.selected_extmark_id)
+                    M.selected_extmark_id = highlight_line(M.win_id, M.buf_id, row, "RimeCandidateSelected")
+                end
             end
-            highlight_line(M.win_id, M.buf_id, row, "Error")
+            --[[
+            RimeCompositionBG
+            RimePreeditNormal, RimePreeditCursor
+            RimeCandidateNormal
+            RimeCandidateSelected
+            RimeCandidateNumber
+            --]]
         end
     )
     M.reset_keymaps()
@@ -283,13 +313,20 @@ function M.enable_rime()
     M.rime_enabled = true
 
     local rime_group = vim.api.nvim_create_augroup("RimeTriggerGroup", { clear = true })
+
     vim.api.nvim_create_autocmd("TextChangedI", {
         group = rime_group,
         pattern = "*",
         callback = function()
             local word_before = utils.get_chars_before_cursor(2, 2) or ""
             vim.print("word_before: \"" .. word_before .. "\"")
-            if not word_before then return end
+            -- 行首不变
+            if word_before == "" then return end
+            -- 英文+标点 + 空格 -> 英文
+            -- 中文+标点 + 空格 -> 中文
+            --      英文 + 空格 -> 中文
+            --      中文 + 空格 -> 英文
+            --  大写字母 + 空格 -> 中文
             if word_before:match("[%w%p]%s") then
                 vim.print("1")
                 if not vim.b.rime_is_enabled then

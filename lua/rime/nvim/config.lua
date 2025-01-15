@@ -101,11 +101,11 @@ return {
         notification_handler = function() end,
     },
     ui = {
-        indices = { "① ", "② ", "③ ", "④ ", "⑤ ", "⑥ ", "⑦ ", "⑧ ", "⑨ ", "⓪ " },
+        indices = { "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⓪" },
         left = "<|",
         right = "|>",
         left_sep = "[",
         right_sep = "]",
-        cursor = "|",
+        cursor = "^",
     }
 }
